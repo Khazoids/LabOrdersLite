@@ -2,8 +2,6 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { ChevronLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -65,12 +63,7 @@ export function NewOrderForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="flex items-center gap-2">
-        <Link href="/" className="text-muted-foreground hover:text-foreground">
-          <ChevronLeft className="h-5 w-5" />
-        </Link>
-        <h2 className="text-lg font-semibold">New Order</h2>
-      </div>
+      <h2 className="text-lg font-semibold">New Order</h2>
 
       <div className="space-y-2">
         <Label htmlFor="name">Order Name</Label>
@@ -84,7 +77,11 @@ export function NewOrderForm({
 
       <div className="space-y-2">
         <Label htmlFor="patient">Patient</Label>
-        <Select value={patientId} onValueChange={(val) => val && setPatientId(val)}>
+        <Select
+          value={patientId}
+          onValueChange={(val) => val && setPatientId(val)}
+          items={patients.map((p) => ({ value: p.id, label: p.name }))}
+        >
           <SelectTrigger id="patient">
             <SelectValue placeholder="Select a patient…" />
           </SelectTrigger>
@@ -174,18 +171,13 @@ export function NewOrderForm({
         <p className="text-sm text-destructive">{error}</p>
       )}
 
-      <div className="flex gap-3">
-        <Button
-          type="submit"
-          disabled={!name.trim() || !patientId || selectedTests.length === 0 || loading}
-          className="flex-1"
-        >
-          {loading ? "Creating…" : "Create Order"}
-        </Button>
-        <Button variant="outline" nativeButton={false} render={<Link href="/" />}>
-          Cancel
-        </Button>
-      </div>
+      <Button
+        type="submit"
+        disabled={!name.trim() || !patientId || selectedTests.length === 0 || loading}
+        className="w-full"
+      >
+        {loading ? "Creating…" : "Create Order"}
+      </Button>
     </form>
   )
 }

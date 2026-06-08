@@ -18,6 +18,7 @@ model Patient {
   dateOfBirth DateTime
   email       String?
   phone       String?
+  address     String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   orders      Order[]

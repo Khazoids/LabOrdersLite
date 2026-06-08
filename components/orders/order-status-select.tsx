@@ -35,7 +35,11 @@ export function OrderStatusSelect({
 
   return (
     <div className="flex flex-col gap-1">
-      <Select defaultValue={status} onValueChange={handleChange}>
+      <Select
+        defaultValue={status}
+        onValueChange={handleChange}
+        items={Object.values(OrderStatus).map((s) => ({ value: s, label: STATUS_LABELS[s] }))}
+      >
         <SelectTrigger className="w-36">
           <SelectValue />
         </SelectTrigger>

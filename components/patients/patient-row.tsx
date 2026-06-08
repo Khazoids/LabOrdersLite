@@ -16,7 +16,7 @@ export function PatientRow({ patient }: { patient: Patient }) {
 
   return (
     <TableRow
-      className="cursor-pointer"
+      className="cursor-pointer hover:bg-muted/50"
       onClick={() => router.push(`/patients/${patient.id}`)}
     >
       <TableCell className="font-medium">{patient.name}</TableCell>

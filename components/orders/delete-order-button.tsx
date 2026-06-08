@@ -40,6 +40,7 @@ export function DeleteOrderButton({ orderId }: { orderId: string }) {
             variant="ghost"
             size="icon"
             className="text-destructive hover:text-destructive"
+            data-testid="delete-order-trigger"
           />
         }
       >

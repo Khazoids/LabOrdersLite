@@ -1,9 +1,10 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import { ArrowUpDown, Search } from "lucide-react"
+import { ArrowUpDown, Search, UserPlus } from "lucide-react"
 import { Input } from "@/components/ui/input"
-import { buttonVariants } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
+import Link from "next/link"
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -38,7 +39,7 @@ const SORT_LABELS: Record<SortKey, string> = {
   dateOfBirth: "Date of Birth",
 }
 
-export function PatientTable({ patients }: { patients: Patient[] }) {
+export function PatientTable({ patients, newPatientHref }: { patients: Patient[]; newPatientHref?: string }) {
   const [search, setSearch] = useState("")
   const [sortBy, setSortBy] = useState<SortKey>("firstName")
 
@@ -98,6 +99,12 @@ export function PatientTable({ patients }: { patients: Patient[] }) {
             </DropdownMenuRadioGroup>
           </DropdownMenuContent>
         </DropdownMenu>
+        {newPatientHref && (
+          <Button nativeButton={false} render={<Link href={newPatientHref} />}>
+            <UserPlus className="h-4 w-4 mr-2" />
+            Add Patient
+          </Button>
+        )}
       </div>
 
       <div className="rounded-lg border">

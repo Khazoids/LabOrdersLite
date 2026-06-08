@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { ArrowUpDown, Plus, Search } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button, buttonVariants } from "@/components/ui/button"
@@ -22,58 +23,86 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { OrderStatusSelect } from "@/components/orders/order-status-select"
 import { DeleteOrderButton } from "@/components/orders/delete-order-button"
-import { OrderStatus } from "@/generated/prisma/enums"
+import { getOrderStatus, type OrderStatus } from "@/lib/order-status"
 
 type Order = {
   id: string
   name: string | null
-  status: OrderStatus
   createdAt: Date | string
+  patientId?: string
+  patient?: { id: string; name: string }
   items: {
     id: string
     priceAtOrder: number
-    labTest: { id: string; code: string; name: string }
+    labTest: { id: string; code: string; name: string; turnaroundDays: number }
   }[]
 }
 
-type SortKey = "name" | "total" | "date" | "status"
+type SortKey = "name" | "total" | "date"
+type Selection = SortKey | `status:${OrderStatus}`
 
 const SORT_LABELS: Record<SortKey, string> = {
   name: "Name",
   total: "Total",
   date: "Date",
-  status: "Status",
 }
 
-const STATUS_ORDER: Record<OrderStatus, number> = {
-  PENDING: 0,
-  IN_PROGRESS: 1,
-  COMPLETE: 2,
+const STATUS_LABELS: Record<OrderStatus, string> = {
+  PENDING: "Pending",
+  IN_PROGRESS: "In Progress",
+  COMPLETE: "Complete",
+}
+
+const STATUS_VARIANTS: Record<OrderStatus, "outline" | "secondary" | "default"> = {
+  PENDING: "outline",
+  IN_PROGRESS: "secondary",
+  COMPLETE: "default",
+}
+
+function selectionLabel(sel: Selection): string {
+  if (sel.startsWith("status:")) {
+    const status = sel.slice(7) as OrderStatus
+    return `Status: ${STATUS_LABELS[status]}`
+  }
+  return `Sort: ${SORT_LABELS[sel as SortKey]}`
 }
 
 export function OrderTable({
   orders,
   newOrderHref,
+  showPatient = false,
 }: {
   orders: Order[]
   newOrderHref: string
+  showPatient?: boolean
 }) {
+  const router = useRouter()
   const [search, setSearch] = useState("")
-  const [sortBy, setSortBy] = useState<SortKey>("date")
+  const [selection, setSelection] = useState<Selection>("date")
 
   const displayed = useMemo(() => {
     const q = search.trim().toLowerCase()
     return orders
       .filter((order) => {
-        if (!q) return true
-        if ((order.name ?? "").toLowerCase().includes(q)) return true
-        if (order.id.toLowerCase().includes(q)) return true
-        return false
+        if (q) {
+          const matchesName = (order.name ?? "").toLowerCase().includes(q)
+          const matchesId = order.id.toLowerCase().includes(q)
+          const matchesPatient = showPatient && (order.patient?.name ?? "").toLowerCase().includes(q)
+          if (!matchesName && !matchesId && !matchesPatient) return false
+        }
+        if (selection.startsWith("status:")) {
+          const filterStatus = selection.slice(7) as OrderStatus
+          const max = Math.max(0, ...order.items.map((i) => i.labTest.turnaroundDays))
+          return getOrderStatus(order.createdAt, max) === filterStatus
+        }
+        return true
       })
       .sort((a, b) => {
-        switch (sortBy) {
+        if (selection.startsWith("status:")) {
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        }
+        switch (selection) {
           case "name":
             return (a.name ?? "").localeCompare(b.name ?? "")
           case "total": {
@@ -82,14 +111,13 @@ export function OrderTable({
             return aTotal - bTotal
           }
           case "date":
-            return (
-              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-            )
-          case "status":
-            return STATUS_ORDER[a.status] - STATUS_ORDER[b.status]
+          default:
+            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         }
       })
-  }, [orders, search, sortBy])
+  }, [orders, search, selection, showPatient])
+
+  const colSpan = showPatient ? 7 : 6
 
   return (
     <div className="space-y-4">
@@ -106,18 +134,20 @@ export function OrderTable({
         <DropdownMenu>
           <DropdownMenuTrigger className={buttonVariants({ variant: "outline" })}>
             <ArrowUpDown className="h-4 w-4" />
-            Sort: {SORT_LABELS[sortBy]}
+            {selectionLabel(selection)}
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuRadioGroup
-              value={sortBy}
-              onValueChange={(v) => setSortBy(v as SortKey)}
+              value={selection}
+              onValueChange={(v) => setSelection(v as Selection)}
             >
               <DropdownMenuLabel>Sort by</DropdownMenuLabel>
               <DropdownMenuRadioItem value="name">Name</DropdownMenuRadioItem>
               <DropdownMenuRadioItem value="total">Total</DropdownMenuRadioItem>
               <DropdownMenuRadioItem value="date">Date</DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="status">Status</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="status:PENDING">Status: Pending</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="status:IN_PROGRESS">Status: In Progress</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="status:COMPLETE">Status: Complete</DropdownMenuRadioItem>
             </DropdownMenuRadioGroup>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -131,6 +161,7 @@ export function OrderTable({
         <Table>
           <TableHeader>
             <TableRow>
+              {showPatient && <TableHead>Patient</TableHead>}
               <TableHead>Name</TableHead>
               <TableHead>Tests</TableHead>
               <TableHead>Total</TableHead>
@@ -143,7 +174,7 @@ export function OrderTable({
             {displayed.length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={6}
+                  colSpan={colSpan}
                   className="text-center text-muted-foreground py-12"
                 >
                   {search ? "No orders match your search." : "No orders yet."}
@@ -151,23 +182,28 @@ export function OrderTable({
               </TableRow>
             )}
             {displayed.map((order) => {
-              const total = order.items.reduce(
-                (s, i) => s + i.priceAtOrder,
-                0
-              )
+              const total = order.items.reduce((s, i) => s + i.priceAtOrder, 0)
               return (
-                <TableRow key={order.id}>
-                  <TableCell className="font-medium">
-                    {order.name ?? "—"}
-                  </TableCell>
+                <TableRow
+                  key={order.id}
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => router.push(`/orders/${order.id}`)}
+                >
+                  {showPatient && order.patient && (
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <Link
+                        href={`/patients/${order.patient.id}`}
+                        className="font-medium hover:underline underline-offset-2"
+                      >
+                        {order.patient.name}
+                      </Link>
+                    </TableCell>
+                  )}
+                  <TableCell className="font-medium">{order.name ?? "—"}</TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
                       {order.items.map((item) => (
-                        <Badge
-                          key={item.id}
-                          variant="secondary"
-                          className="text-xs"
-                        >
+                        <Badge key={item.id} variant="secondary" className="text-xs">
                           {item.labTest.code}
                         </Badge>
                       ))}
@@ -178,12 +214,17 @@ export function OrderTable({
                     {new Date(order.createdAt).toLocaleDateString()}
                   </TableCell>
                   <TableCell>
-                    <OrderStatusSelect
-                      orderId={order.id}
-                      status={order.status}
-                    />
+                    {(() => {
+                      const max = Math.max(0, ...order.items.map((i) => i.labTest.turnaroundDays))
+                      const status = getOrderStatus(order.createdAt, max)
+                      return (
+                        <Badge variant={STATUS_VARIANTS[status]}>
+                          {STATUS_LABELS[status]}
+                        </Badge>
+                      )
+                    })()}
                   </TableCell>
-                  <TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
                     <DeleteOrderButton orderId={order.id} />
                   </TableCell>
                 </TableRow>
