@@ -7,6 +7,7 @@ import { OrderStatus } from "@/generated/prisma/enums"
 
 let db: { prisma: PrismaClient; cleanup: () => Promise<void> }
 let createOrder: (patientId: string, name: string, labTestIds: string[]) => Promise<unknown>
+let updateOrder: (id: string, name: string) => Promise<{ success: boolean; error?: string }>
 let updateOrderStatus: (orderId: string, status: OrderStatus) => Promise<unknown>
 let deleteOrder: (orderId: string) => Promise<unknown>
 let getOrders: () => Promise<unknown>
@@ -21,6 +22,7 @@ beforeAll(async () => {
   db = createTestDb()
   const mod = await import("@/lib/actions/orders")
   createOrder = mod.createOrder
+  updateOrder = mod.updateOrder as typeof updateOrder
   updateOrderStatus = mod.updateOrderStatus
   deleteOrder = mod.deleteOrder
   getOrders = mod.getOrders
@@ -96,6 +98,79 @@ describe("createOrder", () => {
     await createOrder("bad-patient-id", "Will Fail", [labTest.id])
 
     expect(revalidatePath).not.toHaveBeenCalled()
+  })
+})
+
+describe("updateOrder", () => {
+  it("updates the order name and returns { success: true }", async () => {
+    const patient = await createPatient(db.prisma)
+    const labTest = await createLabTest(db.prisma)
+    const order = await createOrderFactory(db.prisma, patient.id, [labTest.id], { name: "Original Name" })
+
+    const result = await updateOrder(order.id, "Updated Name")
+    expect(result).toEqual({ success: true })
+
+    const updated = await db.prisma.order.findUnique({ where: { id: order.id } })
+    expect(updated?.name).toBe("Updated Name")
+  })
+
+  it("trims whitespace from the name before saving", async () => {
+    const patient = await createPatient(db.prisma)
+    const labTest = await createLabTest(db.prisma)
+    const order = await createOrderFactory(db.prisma, patient.id, [labTest.id])
+
+    await updateOrder(order.id, "  Trimmed Name  ")
+
+    const updated = await db.prisma.order.findUnique({ where: { id: order.id } })
+    expect(updated?.name).toBe("Trimmed Name")
+  })
+
+  it("does not affect other orders", async () => {
+    const patient = await createPatient(db.prisma)
+    const labTest = await createLabTest(db.prisma)
+    const o1 = await createOrderFactory(db.prisma, patient.id, [labTest.id], { name: "Order One" })
+    const o2 = await createOrderFactory(db.prisma, patient.id, [labTest.id], { name: "Order Two" })
+
+    await updateOrder(o1.id, "Changed")
+
+    const o2After = await db.prisma.order.findUnique({ where: { id: o2.id } })
+    expect(o2After?.name).toBe("Order Two")
+  })
+
+  it("calls revalidatePath on success", async () => {
+    vi.mocked(revalidatePath).mockClear()
+    const patient = await createPatient(db.prisma)
+    const labTest = await createLabTest(db.prisma)
+    const order = await createOrderFactory(db.prisma, patient.id, [labTest.id])
+
+    await updateOrder(order.id, "Revalidate Test")
+
+    expect(revalidatePath).toHaveBeenCalledWith("/", "layout")
+  })
+
+  it("returns { success: false } when name is empty", async () => {
+    const patient = await createPatient(db.prisma)
+    const labTest = await createLabTest(db.prisma)
+    const order = await createOrderFactory(db.prisma, patient.id, [labTest.id])
+
+    const result = await updateOrder(order.id, "")
+    expect(result.success).toBe(false)
+    expect(result.error).toMatch(/order name/i)
+  })
+
+  it("returns { success: false } when name is only whitespace", async () => {
+    const patient = await createPatient(db.prisma)
+    const labTest = await createLabTest(db.prisma)
+    const order = await createOrderFactory(db.prisma, patient.id, [labTest.id])
+
+    const result = await updateOrder(order.id, "   ")
+    expect(result.success).toBe(false)
+  })
+
+  it("returns { success: false } for a non-existent order id", async () => {
+    const result = await updateOrder("non-existent-id", "Some Name")
+    expect(result.success).toBe(false)
+    expect(result.error).toBeDefined()
   })
 })
 

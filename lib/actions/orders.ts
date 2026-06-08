@@ -68,6 +68,22 @@ export async function createOrder(patientId: string, name: string, labTestIds: s
   }
 }
 
+export async function updateOrder(id: string, name: string): Promise<ActionResult> {
+  const trimmed = name.trim()
+  if (!trimmed) return { success: false, error: "Order name is required." }
+  try {
+    await prisma.order.update({
+      where: { id },
+      data: { name: trimmed },
+    })
+    revalidatePath("/", "layout")
+    return { success: true }
+  } catch (err) {
+    console.error("updateOrder failed:", err)
+    return { success: false, error: "Failed to update order. Please try again." }
+  }
+}
+
 export async function updateOrderStatus(orderId: string, status: OrderStatus): Promise<ActionResult> {
   try {
     await prisma.order.update({

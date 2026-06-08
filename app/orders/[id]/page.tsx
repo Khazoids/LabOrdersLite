@@ -4,7 +4,8 @@ import { ArrowLeft, CheckCircle2, XCircle } from "lucide-react"
 import { AppHeader } from "@/components/ui/app-header"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { EditOrderDialog } from "@/components/orders/edit-order-dialog"
 import {
   Table,
   TableBody,
@@ -82,6 +83,9 @@ export default async function OrderPage({
         <Card>
           <CardHeader>
             <CardTitle>{order.name ?? "Unnamed Order"}</CardTitle>
+            <CardAction>
+              <EditOrderDialog orderId={order.id} orderName={order.name} />
+            </CardAction>
           </CardHeader>
           <CardContent>
             <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">

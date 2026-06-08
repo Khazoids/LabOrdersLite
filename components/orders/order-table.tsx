@@ -24,11 +24,12 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { DeleteOrderButton } from "@/components/orders/delete-order-button"
-import { getOrderStatus, type OrderStatus } from "@/lib/order-status"
+import type { OrderStatus } from "@/lib/order-status"
 
 type Order = {
   id: string
   name: string | null
+  status: OrderStatus
   createdAt: Date | string
   patientId?: string
   patient?: { id: string; name: string }
@@ -93,8 +94,7 @@ export function OrderTable({
         }
         if (selection.startsWith("status:")) {
           const filterStatus = selection.slice(7) as OrderStatus
-          const max = Math.max(0, ...order.items.map((i) => i.labTest.turnaroundDays))
-          return getOrderStatus(order.createdAt, max) === filterStatus
+          return order.status === filterStatus
         }
         return true
       })
@@ -214,15 +214,9 @@ export function OrderTable({
                     {new Date(order.createdAt).toLocaleDateString()}
                   </TableCell>
                   <TableCell>
-                    {(() => {
-                      const max = Math.max(0, ...order.items.map((i) => i.labTest.turnaroundDays))
-                      const status = getOrderStatus(order.createdAt, max)
-                      return (
-                        <Badge variant={STATUS_VARIANTS[status]}>
-                          {STATUS_LABELS[status]}
-                        </Badge>
-                      )
-                    })()}
+                    <Badge variant={STATUS_VARIANTS[order.status]}>
+                      {STATUS_LABELS[order.status]}
+                    </Badge>
                   </TableCell>
                   <TableCell onClick={(e) => e.stopPropagation()}>
                     <DeleteOrderButton orderId={order.id} />

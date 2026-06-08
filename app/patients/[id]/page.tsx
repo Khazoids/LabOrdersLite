@@ -3,9 +3,10 @@ import { notFound } from "next/navigation"
 import { ArrowLeft } from "lucide-react"
 import { AppHeader } from "@/components/ui/app-header"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { getPatientWithOrders } from "@/lib/actions/patients"
 import { OrderTable } from "@/components/orders/order-table"
+import { EditPatientDialog } from "@/components/patients/edit-patient-dialog"
 
 export default async function PatientPage({
   params,
@@ -35,6 +36,9 @@ export default async function PatientPage({
         <Card>
           <CardHeader>
             <CardTitle>{patient.name}</CardTitle>
+            <CardAction>
+              <EditPatientDialog patient={patient} />
+            </CardAction>
           </CardHeader>
           <CardContent>
             <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
