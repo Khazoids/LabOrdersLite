@@ -19,6 +19,7 @@ export async function getOrders() {
     items: order.items.map((item) => ({
       ...item,
       priceAtOrder: Number(item.priceAtOrder),
+      labTest: { ...item.labTest, price: Number(item.labTest.price) },
     })),
   }))
 }
