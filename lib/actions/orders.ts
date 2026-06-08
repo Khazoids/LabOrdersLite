@@ -1,7 +1,7 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { prisma } from "./prisma"
+import { prisma } from "@/lib/prisma"
 import { OrderStatus } from "@/generated/prisma/enums"
 
 export type ActionResult = { success: true } | { success: false; error: string }
@@ -16,15 +16,7 @@ export async function getOrders() {
   })
 }
 
-export async function getPatients() {
-  return prisma.patient.findMany({ orderBy: { name: "asc" } })
-}
-
-export async function getLabTests() {
-  return prisma.labTest.findMany({ orderBy: { name: "asc" } })
-}
-
-export async function createOrder(patientId: string, labTestIds: string[]): Promise<ActionResult> {
+export async function createOrder(patientId: string, name: string, labTestIds: string[]): Promise<ActionResult> {
   try {
     const labTests = await prisma.labTest.findMany({
       where: { id: { in: labTestIds } },
@@ -32,6 +24,7 @@ export async function createOrder(patientId: string, labTestIds: string[]): Prom
     await prisma.order.create({
       data: {
         patientId,
+        name,
         items: {
           create: labTests.map((t) => ({
             labTestId: t.id,
@@ -40,7 +33,7 @@ export async function createOrder(patientId: string, labTestIds: string[]): Prom
         },
       },
     })
-    revalidatePath("/")
+    revalidatePath("/", "layout")
     return { success: true }
   } catch (err) {
     console.error("createOrder failed:", err)
@@ -54,7 +47,7 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus): P
       where: { id: orderId },
       data: { status },
     })
-    revalidatePath("/")
+    revalidatePath("/", "layout")
     return { success: true }
   } catch (err) {
     console.error("updateOrderStatus failed:", err)
@@ -65,7 +58,7 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus): P
 export async function deleteOrder(orderId: string): Promise<ActionResult> {
   try {
     await prisma.order.delete({ where: { id: orderId } })
-    revalidatePath("/")
+    revalidatePath("/", "layout")
     return { success: true }
   } catch (err) {
     console.error("deleteOrder failed:", err)

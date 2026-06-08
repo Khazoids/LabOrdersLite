@@ -97,6 +97,7 @@ async function main() {
   const order1 = await prisma.order.create({
     data: {
       patientId: patient1.id,
+      name: "Annual Checkup",
       status: OrderStatus.COMPLETE,
       items: {
         create: [
@@ -116,6 +117,7 @@ async function main() {
   const order2 = await prisma.order.create({
     data: {
       patientId: patient1.id,
+      name: "Follow-up Panel",
       status: OrderStatus.PENDING,
       items: {
         create: [

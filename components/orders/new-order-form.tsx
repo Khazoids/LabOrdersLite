@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { ChevronLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
   Select,
@@ -15,10 +16,16 @@ import {
 } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { createOrder } from "@/lib/actions"
+import { createOrder } from "@/lib/actions/orders"
+import type { Patient } from "@/generated/prisma/client"
 
-type Patient = { id: string; name: string }
-type LabTest = { id: string; code: string; name: string; price: number | { toString(): string }; turnaroundDays: number }
+type LabTest = {
+  id: string
+  code: string
+  name: string
+  price: number
+  turnaroundDays: number
+}
 
 export function NewOrderForm({
   patients,
@@ -28,6 +35,7 @@ export function NewOrderForm({
   labTests: LabTest[]
 }) {
   const router = useRouter()
+  const [name, setName] = useState("")
   const [patientId, setPatientId] = useState("")
   const [selectedTests, setSelectedTests] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
@@ -39,14 +47,14 @@ export function NewOrderForm({
     )
 
   const selectedLabTests = labTests.filter((t) => selectedTests.includes(t.id))
-  const total = selectedLabTests.reduce((s, t) => s + Number(t.price), 0)
+  const total = selectedLabTests.reduce((s, t) => s + t.price, 0)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!patientId || selectedTests.length === 0) return
+    if (!name.trim() || !patientId || selectedTests.length === 0) return
     setLoading(true)
     setError(null)
-    const result = await createOrder(patientId, selectedTests)
+    const result = await createOrder(patientId, name.trim(), selectedTests)
     if (result.success) {
       router.push("/")
     } else {
@@ -62,6 +70,16 @@ export function NewOrderForm({
           <ChevronLeft className="h-5 w-5" />
         </Link>
         <h2 className="text-lg font-semibold">New Order</h2>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="name">Order Name</Label>
+        <Input
+          id="name"
+          placeholder="e.g. Annual Checkup"
+          value={name}
+          onValueChange={setName}
+        />
       </div>
 
       <div className="space-y-2">
@@ -126,7 +144,7 @@ export function NewOrderForm({
                   </div>
                 </div>
                 <span className="text-sm font-medium">
-                  ${Number(test.price).toFixed(2)}
+                  ${test.price.toFixed(2)}
                 </span>
               </button>
             )
@@ -159,12 +177,12 @@ export function NewOrderForm({
       <div className="flex gap-3">
         <Button
           type="submit"
-          disabled={!patientId || selectedTests.length === 0 || loading}
+          disabled={!name.trim() || !patientId || selectedTests.length === 0 || loading}
           className="flex-1"
         >
           {loading ? "Creating…" : "Create Order"}
         </Button>
-        <Button variant="outline" render={<Link href="/" />}>
+        <Button variant="outline" nativeButton={false} render={<Link href="/" />}>
           Cancel
         </Button>
       </div>

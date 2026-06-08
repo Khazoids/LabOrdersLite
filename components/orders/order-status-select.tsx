@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { updateOrderStatus } from "@/lib/actions"
+import { updateOrderStatus } from "@/lib/actions/orders"
 
 const STATUS_LABELS: Record<OrderStatus, string> = {
   PENDING: "Pending",
