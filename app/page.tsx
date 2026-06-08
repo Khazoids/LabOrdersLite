@@ -1,103 +1,146 @@
-import Image from "next/image";
+import Link from "next/link"
+import { Plus } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { OrderStatusSelect } from "@/components/order-status-select"
+import { DeleteOrderButton } from "@/components/delete-order-button"
+import { getOrders } from "@/lib/actions"
+import { OrderStatus } from "@/generated/prisma/enums"
 
-export default function Home() {
+const STATUS_BADGE: Record<OrderStatus, "default" | "secondary" | "outline"> =
+  {
+    PENDING: "outline",
+    IN_PROGRESS: "secondary",
+    COMPLETE: "default",
+  }
+
+export default async function HomePage() {
+  const orders = await getOrders()
+
+  const totalRevenue = orders.reduce(
+    (sum, o) =>
+      sum + o.items.reduce((s, i) => s + Number(i.priceAtOrder), 0),
+    0
+  )
+
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <div className="min-h-screen bg-background">
+      <header className="border-b">
+        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+          <h1 className="text-xl font-semibold">Lab Orders Lite</h1>
+          <Button render={<Link href="/orders/new" />}>
+            <Plus className="h-4 w-4 mr-2" />
+            New Order
+          </Button>
+        </div>
+      </header>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+      <main className="max-w-6xl mx-auto px-6 py-8 space-y-6">
+        <div className="grid grid-cols-3 gap-4">
+          <StatCard label="Total Orders" value={orders.length} />
+          <StatCard
+            label="Pending"
+            value={orders.filter((o) => o.status === "PENDING").length}
+          />
+          <StatCard
+            label="Total Revenue"
+            value={`$${totalRevenue.toFixed(2)}`}
+          />
+        </div>
+
+        <div className="rounded-lg border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Patient</TableHead>
+                <TableHead>Tests</TableHead>
+                <TableHead>Total</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="w-10" />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {orders.length === 0 && (
+                <TableRow>
+                  <TableCell
+                    colSpan={6}
+                    className="text-center text-muted-foreground py-12"
+                  >
+                    No orders yet.{" "}
+                    <Link href="/orders/new" className="underline">
+                      Create one
+                    </Link>
+                    .
+                  </TableCell>
+                </TableRow>
+              )}
+              {orders.map((order) => {
+                const total = order.items.reduce(
+                  (s, i) => s + Number(i.priceAtOrder),
+                  0
+                )
+                return (
+                  <TableRow key={order.id}>
+                    <TableCell className="font-medium">
+                      {order.patient.name}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {order.items.map((item) => (
+                          <Badge
+                            key={item.id}
+                            variant="secondary"
+                            className="text-xs"
+                          >
+                            {item.labTest.code}
+                          </Badge>
+                        ))}
+                      </div>
+                    </TableCell>
+                    <TableCell>${total.toFixed(2)}</TableCell>
+                    <TableCell className="text-muted-foreground text-sm">
+                      {new Date(order.createdAt).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell>
+                      <OrderStatusSelect
+                        orderId={order.id}
+                        status={order.status}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <DeleteOrderButton orderId={order.id} />
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
+            </TableBody>
+          </Table>
         </div>
       </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
     </div>
-  );
+  )
+}
+
+function StatCard({
+  label,
+  value,
+}: {
+  label: string
+  value: string | number
+}) {
+  return (
+    <div className="rounded-lg border p-4">
+      <p className="text-sm text-muted-foreground">{label}</p>
+      <p className="text-2xl font-semibold mt-1">{value}</p>
+    </div>
+  )
 }

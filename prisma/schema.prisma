@@ -1,0 +1,60 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Patient {
+  id          String   @id @default(cuid())
+  name        String
+  dateOfBirth DateTime
+  email       String?
+  phone       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  orders      Order[]
+}
+
+model LabTest {
+  id             String      @id @default(cuid())
+  code           String      @unique
+  name           String
+  price          Decimal
+  turnaroundDays Int
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  orderItems     OrderItem[]
+}
+
+model Order {
+  id        String      @id @default(cuid())
+  patientId String
+  patient   Patient     @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  status    OrderStatus @default(PENDING)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  items     OrderItem[]
+}
+
+enum OrderStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETE
+}
+
+model OrderItem {
+  id           String  @id @default(cuid())
+  orderId      String
+  order        Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  labTestId    String
+  labTest      LabTest @relation(fields: [labTestId], references: [id])
+  priceAtOrder Decimal
+}
