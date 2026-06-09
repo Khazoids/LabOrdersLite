@@ -15,27 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { getOrderById } from "@/lib/actions/orders"
-
-type OrderStatus = "PENDING" | "IN_PROGRESS" | "COMPLETE"
-
-const STATUS_LABELS: Record<OrderStatus, string> = {
-  PENDING: "Pending",
-  IN_PROGRESS: "In Progress",
-  COMPLETE: "Complete",
-}
-
-const STATUS_VARIANTS: Record<OrderStatus, "outline" | "secondary" | "default"> = {
-  PENDING: "outline",
-  IN_PROGRESS: "secondary",
-  COMPLETE: "default",
-}
-
-function getOrderStatus(createdAt: Date | string, maxTurnaroundDays: number): OrderStatus {
-  const elapsed = (Date.now() - new Date(createdAt).getTime()) / 86_400_000
-  if (elapsed >= maxTurnaroundDays) return "COMPLETE"
-  if (elapsed >= 1) return "IN_PROGRESS"
-  return "PENDING"
-}
+import { OrderStatusSelect } from "@/components/orders/order-status-select"
 
 function deterministicResult(orderId: string, itemId: string): "Positive" | "Negative" {
   const str = orderId + itemId
@@ -55,9 +35,7 @@ export default async function OrderPage({
   const order = await getOrderById(id)
   if (!order) notFound()
 
-  const maxTurnaround = Math.max(0, ...order.items.map((i) => i.labTest.turnaroundDays))
-  const status = getOrderStatus(order.createdAt, maxTurnaround)
-  const isComplete = status === "COMPLETE"
+  const isComplete = order.status === "COMPLETE"
   const total = order.items.reduce((s, i) => s + i.priceAtOrder, 0)
 
   return (
@@ -110,7 +88,7 @@ export default async function OrderPage({
               <div>
                 <dt className="text-sm text-muted-foreground">Status</dt>
                 <dd className="mt-1">
-                  <Badge variant={STATUS_VARIANTS[status]}>{STATUS_LABELS[status]}</Badge>
+                  <OrderStatusSelect orderId={order.id} status={order.status} />
                 </dd>
               </div>
             </dl>

@@ -38,18 +38,29 @@ export function NewOrderForm({
   const [selectedTests, setSelectedTests] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [nameError, setNameError] = useState<string | null>(null)
+  const [patientError, setPatientError] = useState<string | null>(null)
+  const [testsError, setTestsError] = useState<string | null>(null)
 
   const toggleTest = (id: string) =>
-    setSelectedTests((prev) =>
-      prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]
-    )
+    setSelectedTests((prev) => {
+      const next = prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]
+      if (next.length > 0) setTestsError(null)
+      return next
+    })
 
   const selectedLabTests = labTests.filter((t) => selectedTests.includes(t.id))
   const total = selectedLabTests.reduce((s, t) => s + t.price, 0)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!name.trim() || !patientId || selectedTests.length === 0) return
+    const nameErr = !name.trim() ? "Order name is required." : null
+    const patientErr = !patientId ? "Please select a patient." : null
+    const testsErr = selectedTests.length === 0 ? "Please select at least one test." : null
+    setNameError(nameErr)
+    setPatientError(patientErr)
+    setTestsError(testsErr)
+    if (nameErr || patientErr || testsErr) return
     setLoading(true)
     setError(null)
     const result = await createOrder(patientId, name.trim(), selectedTests)
@@ -71,15 +82,17 @@ export function NewOrderForm({
           id="name"
           placeholder="e.g. Annual Checkup"
           value={name}
-          onValueChange={setName}
+          onValueChange={(v) => { setName(v); if (v.trim()) setNameError(null) }}
+          aria-invalid={!!nameError}
         />
+        {nameError && <p className="text-sm text-destructive">{nameError}</p>}
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="patient">Patient</Label>
         <Select
           value={patientId}
-          onValueChange={(val) => val && setPatientId(val)}
+          onValueChange={(val) => { if (val) { setPatientId(val); setPatientError(null) } }}
           items={patients.map((p) => ({ value: p.id, label: p.name }))}
         >
           <SelectTrigger id="patient">
@@ -93,11 +106,12 @@ export function NewOrderForm({
             ))}
           </SelectContent>
         </Select>
+        {patientError && <p className="text-sm text-destructive">{patientError}</p>}
       </div>
 
       <div className="space-y-2">
         <Label>Lab Tests</Label>
-        <div className="rounded-lg border divide-y">
+        <div className="rounded-lg border divide-y" role="group" aria-label="Lab tests">
           {labTests.map((test) => {
             const selected = selectedTests.includes(test.id)
             return (
@@ -147,6 +161,7 @@ export function NewOrderForm({
             )
           })}
         </div>
+        {testsError && <p className="text-sm text-destructive">{testsError}</p>}
       </div>
 
       {selectedLabTests.length > 0 && (
@@ -173,7 +188,7 @@ export function NewOrderForm({
 
       <Button
         type="submit"
-        disabled={!name.trim() || !patientId || selectedTests.length === 0 || loading}
+        disabled={loading || !name.trim() || !patientId || selectedTests.length === 0}
         className="w-full"
       >
         {loading ? "Creating…" : "Create Order"}

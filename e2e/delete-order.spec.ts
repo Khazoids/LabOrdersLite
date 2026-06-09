@@ -1,14 +1,21 @@
 import { test, expect } from "./fixtures/db-fixture"
 
-test.describe("Order management", () => {
+test.describe("Delete order", () => {
   test("clicking the delete icon opens a confirmation dialog", async ({ page }) => {
     await page.goto("/")
     await page.getByRole("row", { name: /john smith/i }).click()
 
-    const deleteBtn = page.getByTestId("delete-order-trigger").first()
-    await deleteBtn.click()
+    await page.getByTestId("delete-order-trigger").first().click()
     await expect(page.getByRole("dialog")).toBeVisible()
     await expect(page.getByText("Delete order?")).toBeVisible()
+  })
+
+  test("confirmation dialog warns that the action cannot be undone", async ({ page }) => {
+    await page.goto("/")
+    await page.getByRole("row", { name: /john smith/i }).click()
+
+    await page.getByTestId("delete-order-trigger").first().click()
+    await expect(page.getByText("This action cannot be undone.")).toBeVisible()
   })
 
   test("clicking Cancel closes the dialog without deleting the order", async ({ page }) => {
@@ -30,30 +37,39 @@ test.describe("Order management", () => {
     await page.getByRole("button", { name: "Delete" }).click()
 
     await expect(page.getByText("Annual Checkup")).not.toBeVisible()
+    await expect(page.getByText("No orders yet.")).toBeVisible()
   })
 
-  test("deleted order is still absent after a page refresh", async ({ page }) => {
+  test("deleted order is absent after a page reload", async ({ page }) => {
     await page.goto("/")
     await page.getByRole("row", { name: /john smith/i }).click()
-    const url = page.url()
+    const patientUrl = page.url()
 
     await page.getByTestId("delete-order-trigger").first().click()
     await page.getByRole("button", { name: "Delete" }).click()
-    await page.goto(url)
 
+    await page.goto(patientUrl)
     await expect(page.getByText("Annual Checkup")).not.toBeVisible()
   })
 
-  test("full flow: create order → verify in list → delete → verify removed", async ({ page }) => {
-    await page.goto("/orders/new")
-    await page.getByPlaceholder("e.g. Annual Checkup").fill("Full Flow Order")
+  test("deleted order is absent from the all-orders page", async ({ page }) => {
+    await page.goto("/")
+    await page.getByRole("row", { name: /john smith/i }).click()
 
-    const patientTrigger = page.getByText("Select a patient…")
-    await patientTrigger.click()
+    await page.getByTestId("delete-order-trigger").first().click()
+    await page.getByRole("button", { name: "Delete" }).click()
+
+    await page.goto("/orders")
+    await expect(page.getByText("Annual Checkup")).not.toBeVisible()
+  })
+
+  test("full flow: create order → verify → delete → verify removed", async ({ page }) => {
+    await page.goto("/orders/new")
+    await page.getByLabel("Order Name").fill("Full Flow Order")
+    await page.getByLabel("Patient").click()
     await page.getByRole("option", { name: "Sarah Johnson" }).click()
     await page.getByRole("button", { name: /complete blood count/i }).click()
     await page.getByRole("button", { name: "Create Order" }).click()
-
     await expect(page).toHaveURL("/")
 
     await page.getByRole("row", { name: /sarah johnson/i }).click()

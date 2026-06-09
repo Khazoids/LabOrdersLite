@@ -88,6 +88,7 @@ export function NewPatientForm() {
 
     const result = await createPatient(fd)
     if (result.success) {
+      setLoading(false)
       router.push("/")
     } else {
       setServerError(result.error)

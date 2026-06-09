@@ -1,9 +1,8 @@
 import { test, expect } from "./fixtures/db-fixture"
 
 test.describe("Create new patient", () => {
-  test("Add Patient button navigates to the new patient form", async ({ page }) => {
+  test("Add Patient button navigates to /patients/new", async ({ page }) => {
     await page.goto("/")
-    // Base UI Button with render={<Link>} renders as <a role="button">
     await page.getByRole("button", { name: "Add Patient" }).click()
     await expect(page).toHaveURL("/patients/new")
   })
@@ -35,11 +34,21 @@ test.describe("Create new patient", () => {
     await expect(page.getByText("Date of birth is required.")).toBeVisible()
     await expect(page.getByText("Email address is invalid.")).toBeVisible()
     await expect(page.getByText("Phone is required.")).toBeVisible()
+    await expect(page.getByText("Street address is required.")).toBeVisible()
+    await expect(page.getByText("City is required.")).toBeVisible()
+    await expect(page.getByText("State is required.")).toBeVisible()
+    await expect(page.getByText("ZIP code is required.")).toBeVisible()
   })
 
-  test("submitting a valid form creates the patient and shows them on the home page", async ({ page }) => {
+  test("shows an error when date of birth is in the future", async ({ page }) => {
     await page.goto("/patients/new")
+    await page.getByLabel("Date of Birth").fill("2099-01-01")
+    await page.getByLabel("Date of Birth").blur()
+    await expect(page.getByText("Date of birth cannot be in the future.")).toBeVisible()
+  })
 
+  test("submitting a valid form creates the patient and redirects to home", async ({ page }) => {
+    await page.goto("/patients/new")
     await page.getByLabel("First Name").fill("E2E New")
     await page.getByLabel("Last Name").fill("Patient")
     await page.getByLabel("Date of Birth").fill("1990-05-15")
@@ -49,16 +58,13 @@ test.describe("Create new patient", () => {
     await page.getByLabel("City").fill("Springfield")
     await page.getByLabel("State").fill("IL")
     await page.getByLabel("Zip Code").fill("62701")
-
     await page.getByRole("button", { name: "Create Patient" }).click()
-
     await expect(page).toHaveURL("/")
     await expect(page.getByText("E2E New Patient")).toBeVisible()
   })
 
-  test("newly created patient appears in the patient list and can be searched", async ({ page }) => {
+  test("newly created patient can be found via the search input", async ({ page }) => {
     await page.goto("/patients/new")
-
     await page.getByLabel("First Name").fill("Unique")
     await page.getByLabel("Last Name").fill("SearchTarget")
     await page.getByLabel("Date of Birth").fill("1975-11-20")
@@ -68,11 +74,28 @@ test.describe("Create new patient", () => {
     await page.getByLabel("City").fill("Chicago")
     await page.getByLabel("State").fill("IL")
     await page.getByLabel("Zip Code").fill("60601")
-
     await page.getByRole("button", { name: "Create Patient" }).click()
     await expect(page).toHaveURL("/")
 
     await page.getByPlaceholder("Search patients...").fill("SearchTarget")
     await expect(page.getByText("Unique SearchTarget")).toBeVisible()
+  })
+
+  test("newly created patient does not appear in unrelated searches", async ({ page }) => {
+    await page.goto("/patients/new")
+    await page.getByLabel("First Name").fill("NewPatient")
+    await page.getByLabel("Last Name").fill("Adams")
+    await page.getByLabel("Date of Birth").fill("1985-03-10")
+    await page.getByLabel("Email").fill("new@adams.com")
+    await page.getByLabel("Phone").fill("555-9999")
+    await page.getByLabel("Street Address").fill("5 Oak Street")
+    await page.getByLabel("City").fill("Peoria")
+    await page.getByLabel("State").fill("IL")
+    await page.getByLabel("Zip Code").fill("61602")
+    await page.getByRole("button", { name: "Create Patient" }).click()
+    await expect(page).toHaveURL("/")
+
+    await page.getByPlaceholder("Search patients...").fill("Smith")
+    await expect(page.getByText("NewPatient Adams")).not.toBeVisible()
   })
 })

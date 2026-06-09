@@ -1,34 +1,29 @@
-import path from "path"
+import { execSync } from "child_process"
 import fs from "fs"
-import Database from "better-sqlite3"
+import path from "path"
+
+const TEST_DB_URL = "file:./test-e2e.db"
 
 export default async function globalSetup() {
-  const dbPath = path.resolve(process.cwd(), "test-e2e.db")
-  const migrationsDir = path.join(process.cwd(), "prisma", "migrations")
+  const cwd = process.cwd()
+  const dbFile = path.resolve(cwd, "test-e2e.db")
 
-  const folders = fs
-    .readdirSync(migrationsDir)
-    .filter((f) => fs.statSync(path.join(migrationsDir, f)).isDirectory())
-    .sort()
+  // Write debug info so we can verify after the run
+  fs.writeFileSync(path.resolve(cwd, "e2e-setup-debug.txt"), `cwd=${cwd}\ndbFile=${dbFile}\nurl=${TEST_DB_URL}\n`)
 
-  // Try to delete the old DB for a clean slate; skip if file is locked (Windows)
-  let canRecreate = true
-  if (fs.existsSync(dbPath)) {
+  if (fs.existsSync(dbFile)) {
     try {
-      fs.rmSync(dbPath)
+      fs.unlinkSync(dbFile)
     } catch {
-      canRecreate = false
+      // locked
     }
   }
 
-  if (canRecreate) {
-    const rawDb = new Database(dbPath)
-    rawDb.pragma("foreign_keys = ON")
-    for (const folder of folders) {
-      const sql = fs.readFileSync(path.join(migrationsDir, folder, "migration.sql"), "utf-8")
-      rawDb.exec(sql)
-    }
-    rawDb.close()
-  }
-  // If canRecreate is false, the existing file has the schema already (same migrations)
+  execSync("npx prisma migrate deploy", {
+    env: { ...process.env, DATABASE_URL: TEST_DB_URL },
+    stdio: "inherit",
+    cwd,
+  })
+
+  fs.appendFileSync(path.resolve(cwd, "e2e-setup-debug.txt"), `afterMigrate=${fs.existsSync(dbFile)}\nfileSize=${fs.existsSync(dbFile) ? fs.statSync(dbFile).size : -1}\n`)
 }

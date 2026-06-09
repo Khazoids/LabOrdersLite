@@ -1,5 +1,4 @@
 import { getOrders } from "@/lib/actions/orders"
-import { getOrderStatus } from "@/lib/order-status"
 import { AppHeader } from "@/components/ui/app-header"
 import { OrderTable } from "@/components/orders/order-table"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,12 +8,10 @@ export default async function OrdersPage() {
 
   const statusCounts = orders.reduce(
     (acc, order) => {
-      const max = Math.max(0, ...order.items.map((i) => i.labTest.turnaroundDays))
-      const status = getOrderStatus(order.createdAt, max)
-      acc[status]++
+      acc[order.status]++
       return acc
     },
-    { PENDING: 0, IN_PROGRESS: 0, COMPLETE: 0 }
+    { PENDING: 0, IN_PROGRESS: 0, COMPLETE: 0 } as Record<string, number>
   )
 
   return (

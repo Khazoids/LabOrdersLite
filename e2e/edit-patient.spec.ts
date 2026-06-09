@@ -1,6 +1,7 @@
 import { test, expect } from "./fixtures/db-fixture"
+import type { Page } from "@playwright/test"
 
-async function createPatient(page: Parameters<Parameters<typeof test>[1]>[0]["page"]) {
+async function createPatient(page: Page) {
   await page.goto("/patients/new")
   await page.getByLabel("First Name").fill("Edit")
   await page.getByLabel("Last Name").fill("Target")
@@ -22,7 +23,7 @@ test.describe("Edit patient", () => {
     await expect(page.getByRole("button", { name: /edit/i })).toBeVisible()
   })
 
-  test("clicking Edit opens a dialog with the patient's current data pre-filled", async ({ page }) => {
+  test("clicking Edit opens a dialog pre-filled with the patient's data", async ({ page }) => {
     await createPatient(page)
     await page.getByText("Edit Target").click()
     await page.getByRole("button", { name: /edit/i }).click()
@@ -37,7 +38,7 @@ test.describe("Edit patient", () => {
     await expect(page.getByLabel("Zip Code")).toHaveValue("62701")
   })
 
-  test("saving changes updates the patient name on the page", async ({ page }) => {
+  test("saving a name change updates the patient name on the page", async ({ page }) => {
     await createPatient(page)
     await page.getByText("Edit Target").click()
     await page.getByRole("button", { name: /edit/i }).click()
@@ -45,10 +46,10 @@ test.describe("Edit patient", () => {
     await page.getByLabel("First Name").fill("Updated")
     await page.getByRole("button", { name: "Save Changes" }).click()
 
-    await expect(page.getByText("Updated Target")).toBeVisible()
+    await expect(page.getByText("Updated Target").first()).toBeVisible()
   })
 
-  test("saving changes updates the email shown on the page", async ({ page }) => {
+  test("saving an email change updates the email on the page", async ({ page }) => {
     await createPatient(page)
     await page.getByText("Edit Target").click()
     await page.getByRole("button", { name: /edit/i }).click()
@@ -66,7 +67,7 @@ test.describe("Edit patient", () => {
 
     await page.getByRole("button", { name: "Save Changes" }).click()
 
-    await expect(page.getByText("Edit Patient")).not.toBeVisible()
+    await expect(page.getByRole("dialog")).not.toBeVisible()
   })
 
   test("Cancel closes the dialog without saving changes", async ({ page }) => {
@@ -78,10 +79,10 @@ test.describe("Edit patient", () => {
     await page.getByRole("button", { name: "Cancel" }).click()
 
     await expect(page.getByText("Discarded Target")).not.toBeVisible()
-    await expect(page.getByText("Edit Target")).toBeVisible()
+    await expect(page.getByText("Edit Target").first()).toBeVisible()
   })
 
-  test("shows validation errors for empty required fields on submit", async ({ page }) => {
+  test("shows validation error when first name is cleared and saved", async ({ page }) => {
     await createPatient(page)
     await page.getByText("Edit Target").click()
     await page.getByRole("button", { name: /edit/i }).click()
@@ -92,14 +93,18 @@ test.describe("Edit patient", () => {
     await expect(page.getByText("First name is required.")).toBeVisible()
   })
 
-  test("updated name appears in the breadcrumb after saving", async ({ page }) => {
+  test("updated patient name persists after navigating away and back", async ({ page }) => {
     await createPatient(page)
     await page.getByText("Edit Target").click()
+    const patientUrl = page.url()
     await page.getByRole("button", { name: /edit/i }).click()
 
-    await page.getByLabel("First Name").fill("Renamed")
+    await page.getByLabel("First Name").fill("Persistent")
     await page.getByRole("button", { name: "Save Changes" }).click()
+    await expect(page.getByText("Persistent Target").first()).toBeVisible()
 
-    await expect(page.getByText("Renamed Target")).toBeVisible()
+    await page.goto("/")
+    await page.goto(patientUrl)
+    await expect(page.getByText("Persistent Target").first()).toBeVisible()
   })
 })

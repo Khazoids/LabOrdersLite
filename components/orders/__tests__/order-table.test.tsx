@@ -1,6 +1,8 @@
 import { render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { OrderTable } from "@/components/orders/order-table"
+import { getOrderStatus } from "@/lib/order-status"
+import type { OrderStatus } from "@/lib/order-status"
 
 vi.mock("@/lib/actions/orders", () => ({
   deleteOrder: vi.fn().mockResolvedValue({ success: true }),
@@ -72,12 +74,16 @@ function makeOrder(overrides: {
   createdAtOffset?: number
   turnaroundDays?: number
   price?: number
+  status?: OrderStatus
 }) {
+  const createdAt = new Date(NOW - (overrides.createdAtOffset ?? 0) * DAY)
+  const turnaroundDays = overrides.turnaroundDays ?? 3
   return {
     id: overrides.id ?? "order-1",
     // Use !== undefined so explicit null is preserved (null ?? "x" returns "x")
     name: overrides.name !== undefined ? overrides.name : "Test Order",
-    createdAt: new Date(NOW - (overrides.createdAtOffset ?? 0) * DAY),
+    createdAt,
+    status: overrides.status ?? getOrderStatus(createdAt, turnaroundDays),
     items: [
       {
         id: "item-1",
@@ -86,7 +92,7 @@ function makeOrder(overrides: {
           id: "lt-1",
           code: "CBC",
           name: "Complete Blood Count",
-          turnaroundDays: overrides.turnaroundDays ?? 3,
+          turnaroundDays,
         },
       },
     ],

@@ -44,6 +44,9 @@ export async function getOrderById(id: string) {
 }
 
 export async function createOrder(patientId: string, name: string, labTestIds: string[]): Promise<ActionResult> {
+  if (!name.trim()) return { success: false, error: "Order name is required." }
+  if (!patientId) return { success: false, error: "Patient is required." }
+  if (labTestIds.length === 0) return { success: false, error: "At least one lab test is required." }
   try {
     const labTests = await prisma.labTest.findMany({
       where: { id: { in: labTestIds } },
