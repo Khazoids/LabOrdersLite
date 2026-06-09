@@ -16,6 +16,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { updatePatient } from "@/lib/actions/patients"
+import { EMAIL_RE } from "@/lib/utils"
 
 type PatientData = {
   id: string
@@ -37,8 +38,6 @@ type Fields = {
   state: string
   zipCode: string
 }
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 function validate(f: Fields): Partial<Record<keyof Fields, string>> {
   const errs: Partial<Record<keyof Fields, string>> = {}
