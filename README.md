@@ -2,19 +2,20 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
-First, run the development server:
+**Prerequisites:** [Node.js 18.18+](https://nodejs.org)
+
+Clone the repository, then run:
 
 ```bash
+npm run setup
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`setup` installs dependencies, generates the Prisma client, applies database migrations, and seeds the database with sample patients and orders. `dev` starts the development server.
+
+Open [http://localhost:3000](http://localhost:3000) to view the app.
+
+The seeded database includes 3 patients, 6 lab tests, and 7 orders across various statuses so the app is usable immediately without manual data entry.
 
 ## Testing
 
